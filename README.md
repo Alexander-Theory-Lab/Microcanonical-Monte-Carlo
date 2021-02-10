@@ -1,1 +1,1 @@
-# Microcanonical-Monter-Carlo
+# Microcanonical Monte Carlo
