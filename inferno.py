@@ -67,10 +67,12 @@ class Inferno:
             s *= -1
             # Notice we substract the cost to maintain net0 energy
             self.E_demon -= cost
+            self.E_lattice += cost
         # If it costs energy, only flip if demon has enough energy
         elif cost < self.E_demon:
             s *= -1
             self.E_demon -= cost
+            self.E_lattice += cost
         # Otherwise, pass
         else:
             pass
