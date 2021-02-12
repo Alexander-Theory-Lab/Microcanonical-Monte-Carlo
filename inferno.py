@@ -1,6 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+#methods for InfernoNetwork class
+import networkx as nx
+from random import sample
+from itertools import count
 
 class Inferno:
     """
@@ -78,3 +82,110 @@ class Inferno:
             pass
         # Update the lattice site spin
         self.lattice[a, b] = s
+
+
+class InfernoNetwork:
+    """
+        InfernoNetwork:
+            - Implements microcanonical Monte Carlo simulation on a network
+    """
+    def __init__(self,N):
+        """
+            :params:
+                N - size of lattice
+                lattice - state of lattice
+                E_lattice - energy of lattice
+                E_demon - energy of the demon
+        """
+        self.N = N
+        self.G = self.generate_lattice(N)
+        self.E_demon = 0
+
+
+    def generate_lattice(self,N):
+        """
+            Generates the initial periodic lattice with random spins
+        """
+        # Generate a blank periodic lattice as a network
+        blank_network = nx.grid_2d_graph(N,N,periodic=True)
+        # For each node in network add a random spin -- up or down
+        for node in list(blank_network.nodes):
+            blank_network.node[node]['spin'] = 0.5 * (2*np.random.randint(2) - 1)
+        return blank_network
+
+    def demon_move(self):
+        """
+            Randomly move demon on network and try to flip spin
+        """
+        # Grab a random node from the graph
+        rand_node = sample(list(self.G.nodes),1)[0]
+
+        # Calculates the Energy required to flip a spin
+        sum_spin, sum_spin_flip = 0, 0
+        for neighbor in self.G.neighbors(rand_node):
+            sum_spin += self.G.node[neighbor]['spin'] * self.G.node[rand_node]['spin']
+            sum_spin_flip += self.G.node[neighbor]['spin'] * (-1) * self.G.node[rand_node]['spin']
+            DE = sum_spin_flip - sum_spin
+
+        # If energy change is favorable flip
+        if DE < 0:
+            # Flip the spin
+            self.G.node[rand_node]['spin'] = (-1) * self.G.node[rand_node]['spin']
+            # Give the energy to the demon
+            self.E_demon += np.absolute(DE)
+            return True
+        # If demon can afford to flip the spin, flip it
+        elif self.E_demon > DE:
+            # Flip the spin
+            self.G.node[rand_node]['spin'] = (-1) * self.G.node[rand_node]['spin']
+            # Take energy from the demon
+            self.E_demon -= np.absolute(DE)
+            return True
+        # The demon lacked the energy to flip, pass
+        else:
+            return False
+
+    def simulate(self,N):
+        """
+            Simulate for N iterations
+        """
+        pos = nx.kamada_kawai_layout(self.G)
+        plt.figure(figsize=(6,6))
+        demon_hist = []
+        for i in range(N):
+            demon_hist.append(self.E_demon)
+            self.plot_stuff(pos,demon_hist)
+            self.demon_move()
+        plt.show()
+
+
+    def plot_stuff(self,pos,demon_hist):
+        """
+            Handles basic visualization 
+        """
+        # Functional form of temperature
+        B = lambda x: round((1./4) * np.log(1 + 4./np.mean(x)),2)
+        round_sig = lambda f,p: float(('%.' + str(p) + 'e') % f)
+
+        # get unique groups
+        groups = set(nx.get_node_attributes(self.G,'spin').values())
+        mapping = dict(zip(sorted(groups),count()))
+        nodes = self.G.nodes()
+        colors = [mapping[self.G.node[n]['spin']] for n in nodes]
+
+        # drawing nodes and edges separately so we can capture collection for colobar
+        ec = nx.draw_networkx_edges(self.G, pos, alpha=0.2)
+        nc = nx.draw_networkx_nodes(self.G, pos, nodelist=nodes, node_color=colors, 
+                                    with_labels=False, node_size=100, cmap='viridis')
+
+        plt.axis('off')
+        plt.title(r'E$_{d}$ =' + str(self.E_demon) + '\nT = ' + str(round_sig(1/B(demon_hist),1)))
+        plt.pause(0.01)
+        plt.clf()
+
+
+if __name__ == "__main__":
+    # Choose a 7 x 7 periodic lattice 
+    X = InfernoNetwork(7)
+    # Simulate for 100 iterations
+    X.simulate(100)
