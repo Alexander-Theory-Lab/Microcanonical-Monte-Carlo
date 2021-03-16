@@ -137,11 +137,12 @@ class InfernoNetwork:
         rand_node = sample(list(self.G.nodes),1)[0]
 
         # Calculates the Energy required to flip a spin
+        ## DE was inside for loop -- this is wrong!
         sum_spin, sum_spin_flip = 0, 0
         for neighbor in self.G.neighbors(rand_node):
             sum_spin += self.G.node[neighbor]['spin'] * self.G.node[rand_node]['spin'] + self.H * self.G.node[rand_node]['spin']
             sum_spin_flip += self.G.node[neighbor]['spin'] * (-1) * self.G.node[rand_node]['spin'] + self.H * (-1) * self.G.node[rand_node]['spin']
-            DE = sum_spin_flip - sum_spin
+        DE = sum_spin_flip - sum_spin
 
         # If energy change is favorable flip
         if DE < 0:
@@ -178,8 +179,9 @@ class InfernoNetwork:
             demon_hist.append(self.E_demon)
             self.plot_stuff(pos,demon_hist,N)
             self.demon_move()
-            plt.savefig('/home/michael/demon/gif/imgage_' + str(i))
-        #plt.show()
+            #plt.savefig('/home/michael/demon/gif/imgage_' + str(i))
+            plt.pause(0.01)
+        plt.show()
 
 
 
